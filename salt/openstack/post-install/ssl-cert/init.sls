@@ -50,6 +50,7 @@
     - pattern: ^(#*\s*)USE_SSL.* 
     - repl: "USE_SSL = True"
     - append_if_not_found: True
+    - onlyif: test -f /etc/openstack-dashboard/local_settings
 
 {{fileName}} - Set 'CSRF_COOKIE_SECURE' to 'True' in /etc/openstack-dashboard/local_settings:
   file.replace:
@@ -57,6 +58,7 @@
     - pattern: ^(#*\s*)CSRF_COOKIE_SECURE.* 
     - repl: "CSRF_COOKIE_SECURE = True"
     - append_if_not_found: True
+    - onlyif: test -f /etc/openstack-dashboard/local_settings
 
 {{fileName}} - Set 'SESSION_COOKIE_SECURE' to 'True' in /etc/openstack-dashboard/local_settings:
   file.replace:
@@ -64,6 +66,7 @@
     - pattern: ^(#*\s*)SESSION_COOKIE_SECURE.* 
     - repl: "SESSION_COOKIE_SECURE = True"
     - append_if_not_found: True
+    - onlyif: test -f /etc/openstack-dashboard/local_settings
 
 {{fileName}} - Set 'SESSION_COOKIE_HTTPONLY' to 'True' in /etc/openstack-dashboard/local_settings:
   file.replace:
@@ -71,6 +74,7 @@
     - pattern: ^(#*\s*)SESSION_COOKIE_HTTPONLY.* 
     - repl: "SESSION_COOKIE_HTTPONLY = True"
     - append_if_not_found: True
+    - onlyif: test -f /etc/openstack-dashboard/local_settings
 
 {{fileName}} - Manage file /etc/httpd/conf.d/openstack-dashboard.conf:
   file.managed:
