@@ -11,8 +11,8 @@
 {%- set osFamily = salt['grains.get']('os_family', '') %}
 {%- set controllerHost = salt['pillar.get']('openstack:CONTROLLER_HOST', '') %}
 {%- set dashFQDN = salt['grains.get']('fqdn') %}
-{%- set dashIP = salt['grains.get']('ip4_interfaces:eth1')[0] %}
-
+{%- set managementInterface = salt['grains.get']('openstack:NETWORK_INTERFACE:MANAGEMENT', 'eth0') %}
+{%- set dashIP = salt['grains.get']('ip4_interfaces:' ~ managementInterface)[0] %}
 
 {%- if osFamily == 'RedHat' %}
 
@@ -62,10 +62,12 @@
     - watch:
       - file: {{fileName}} - Manage file /etc/ld.so.conf
 
+{% if 'SELinux is disabled' not in salt['cmd.run']("getsebool httpd_can_network_connect") %}
 {{fileName}} - Ensure SELinux policy allows network connections to the HTTP server:
   cmd.run:
     - name: "setsebool -P httpd_can_network_connect on"
     - unless: 'getsebool httpd_can_network_connect | grep "httpd_can_network_connect --> on"'
+{% endif %}
 
 {{fileName}} - Start httpd service:
   service.running:

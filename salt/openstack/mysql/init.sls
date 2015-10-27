@@ -10,6 +10,7 @@
 {%- set openstackRole = salt['grains.get']('openstack:ROLE', []) %}
 {%- set osFamily = salt['grains.get']('os_family', '') %}
 {%- set dbRootPass = salt['pillar.get']('openstack:DB_PASS', 'dbPass') %}
+{%- set bindAddress = salt['grains.get']('host', '0.0.0.0') %}
 
 
 {%- if osFamily == 'RedHat' %}
@@ -32,7 +33,7 @@
         user=mysql
         # Disabling symbolic-links is recommended to prevent assorted security risks
         symbolic-links=0
-        bind-address = {{ salt['grains.get']('ip4_interfaces:eth1')[0] }}
+        bind-address = {{ bindAddress }}
         default-storage-engine = innodb
         innodb_file_per_table
         collation-server = utf8_general_ci

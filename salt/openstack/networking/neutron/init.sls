@@ -11,7 +11,9 @@
 {%- set openstackRole = salt['grains.get']('openstack:ROLE', []) %}
 {%- set controllerHost = salt['pillar.get']('openstack:CONTROLLER_HOST', '') %}
 {%- set domain = salt['grains.get']('domain', 'domain.com') %}
-{%- set managementIP = salt['grains.get']('ip4_interfaces:eth1')[0] %}
+{%- set tunnelInterface = salt['grains.get']('openstack:NETWORK_INTERFACE:TUNNEL', salt['grains.get']('openstack:NETWORK_INTERFACE:MANAGEMENT')) %}
+{%- set tunnelIP = salt['grains.get']('ip4_interfaces:'~tunnelInterface)[0] %}
+{%- set externalInterface = salt['grains.get']('openstack:NETWORK_INTERFACE:EXTERNAL', 'eth1') %}
 {%- set dbRootPass = salt['pillar.get']('openstack:DB_PASS', 'dbPass') %}
 {%- set adminToken = salt['pillar.get']('openstack:ADMIN_TOKEN', 'ADMIN') %}
 {%- set adminUser = salt['pillar.get']('openstack:ADMIN_USER', 'admin') %}
@@ -71,7 +73,7 @@
     - makedirs: True
     - template: jinja
     - defaults:
-        managementIP: {{managementIP}}
+        tunnelIP: {{tunnelIP}}
         openstackRole: {{openstackRole}}
         tenantNetworkTypes: {{tenantNetworkTypes}}
     - require:
@@ -377,10 +379,10 @@
     - watch_in:
       - service: {{fileName}} - Start neutron-metadata-agent service and enable it to start at boot
 
-{{fileName}} - Set 'auth_region' to 'regionOne' in /etc/neutron/metadata_agent.ini:
+{{fileName}} - Set 'auth_region' to 'RegionOne' in /etc/neutron/metadata_agent.ini:
   cmd.run:
-    - name: "openstack-config --set /etc/neutron/metadata_agent.ini DEFAULT auth_region regionOne"
-    - unless: "[ $(openstack-config --get /etc/neutron/metadata_agent.ini DEFAULT auth_region) = regionOne ]"
+    - name: "openstack-config --set /etc/neutron/metadata_agent.ini DEFAULT auth_region RegionOne"
+    - unless: "[ $(openstack-config --get /etc/neutron/metadata_agent.ini DEFAULT auth_region) = RegionOne ]"
     - watch_in:
       - service: {{fileName}} - Start neutron-metadata-agent service and enable it to start at boot
 
@@ -434,7 +436,7 @@
     - makedirs: True
     - template: jinja
     - defaults:
-        managementIP: {{managementIP}}
+        tunnelIP: {{tunnelIP}}
         openstackRole: {{openstackRole}}
         tenantNetworkTypes: {{tenantNetworkTypes}}
     - require:
@@ -466,8 +468,8 @@
 
 {{fileName}} - Add a port to the external bridge that connects to the physical external network interface:
   cmd.run:
-    - name: "ovs-vsctl add-port br-ex eth2"
-    - unless: "ovs-vsctl list-ports br-ex | grep eth2"
+    - name: "ovs-vsctl add-port br-ex {{externalInterface}}"
+    - unless: "ovs-vsctl list-ports br-ex | grep {{externalInterface}}"
     - require:
       - pkg: {{fileName}} - Install necessary networking components
       - cmd: {{fileName}} - Add the external bridge
@@ -537,6 +539,7 @@
     - name: "/etc/init.d/neutron-openvswitch-agent"
     - pattern: "plugins/openvswitch/ovs_neutron_plugin.ini"
     - repl: "plugin.ini"
+    - onlyif: test -f /etc/init.d/neutron-openvswitch-agent
     - require:
       - pkg: {{fileName}} - Install necessary networking components
 
@@ -564,6 +567,8 @@
     - enable: True
     - require:
       - pkg: {{fileName}} - Install necessary networking components
+    - watch:
+      - file: {{fileName}} - Replace location of plugin.ini file in /etc/init.d/neutron-openvswitch-agent
 
 {% if 'network' in openstackRole %}
 {% for service in ['neutron-l3-agent', 'neutron-dhcp-agent', 'neutron-metadata-agent'] %}

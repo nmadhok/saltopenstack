@@ -24,7 +24,8 @@
 {%- set messagingType = salt['pillar.get']('openstack:MESSAGING_TYPE', 'rabbitmq') %}
 {%- set messagingUser = salt['pillar.get']('openstack:MESSAGING_USER', messagingType) %}
 {%- set messagingPass = salt['pillar.get']('openstack:MESSAGING_PASS', messagingType ~ 'Pass') %}
-{%- set managementIP = salt['grains.get']('ip4_interfaces:eth1')[0] %}
+{%- set managementInterface = salt['grains.get']('openstack:NETWORK_INTERFACE:MANAGEMENT', 'eth0') %}
+{%- set managementIP = salt['grains.get']('ip4_interfaces:'~managementInterface)[0] %}
 {%- set osFamily = salt['grains.get']('os_family', '') %}
 
 
@@ -183,12 +184,14 @@
       - pkg: {{fileName}} - Install nova-compute package
 
 {% if salt['cmd.run']("egrep -c '(vmx|svm)' /proc/cpuinfo") == '0' %}
+{% if 'SELinux is disabled' not in salt['cmd.run']("getsebool virt_use_execmem") %}
 {{fileName}} - Add SELinux rule to set 'virt_use_execmem' to 'on':
   cmd.run:
     - name: 'setsebool -P virt_use_execmem on'
     - unless: 'getsebool virt_use_execmem | grep "virt_use_execmem --> on"'
     - watch_in:
       - service: {{fileName}} - Start libvirtd and enable it to start at boot
+{% endif %}
 
 {{fileName}} - Create symlink from '/usr/bin/qemu-system-x86_64' to '/usr/libexec/qemu-kvm':
   file.symlink:
